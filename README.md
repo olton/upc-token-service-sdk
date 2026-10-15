@@ -1,4 +1,4 @@
-This is a Kotlin Multiplatform project targeting Android, Desktop (JVM), iOS, Web, built with
+> This is a Kotlin Multiplatform project targeting Android, Desktop (JVM), iOS, Web, built with
 the [Kotlin Toolchain](https://kotlin-toolchain.org/dev/).
 
 ### UPC Token Service SDK
