@@ -1,12 +1,17 @@
-> This is a Kotlin Multiplatform project targeting Android, Desktop (JVM), iOS, Web, built with
-the [Kotlin Toolchain](https://kotlin-toolchain.org/dev/).
+# UPC Token Service SDK
 
-### UPC Token Service SDK
+Єдиний кросплатформний Kotlin Multiplatform (KMP) SDK (`shared`) для взаємодії з API UPC Token Service (Український процесинговий центр).
 
-SDK для інтеграції з API UPC Token Service (Український процесинговий центр).
-Підтримує роботу на всіх платформах Kotlin Multiplatform (JVM/Android/iOS/Wasm).
+Модуль `shared` виступає **єдиним джерелом істини (Single Source of Truth)** для всієї бізнес-логіки, протоколів безпеки (JWS), серіалізації моделей та клієнтів для всіх платформ:
+- **Kotlin** (Multiplatform / Android / JVM / iOS / JS) — нативні корутини (`suspend` функції).
+- **Java** (Java 8, 11, 17, 21+, Spring Boot) — через вбудований у `shared` адаптер `UpcTokenServiceJavaClient` (`CompletableFuture`).
+- **JavaScript (Web / Browser)** — через вбудований у `shared` адаптер `UpcTokenServiceJsClient` (JavaScript `Promise`).
+- **NodeJS** (Backend) — через вбудований у `shared` адаптер `UpcTokenServiceJsClient` (`Promise` / `async/await`).
+- **Swift / iOS** (iOS, macOS) — через скомпільований з `shared` нативний фреймворк (`shared.framework` / Swift Concurrency `async/await`).
 
-#### Підтримувані методи API:
+---
+
+## Підтримувані методи API (всі 8 операцій)
 1. **Create Token** (`/go/token/create`) — Створення токену на основі реквізитів платіжної картки (для PCI DSS мерчантів).
 2. **Refresh Token** (`/go/token/refresh`) — Оновлення динамічної криптограми / даних токену.
 3. **Delete Token** (`/go/token/delete`) — Деактивація (видалення) токену.
@@ -16,110 +21,224 @@ SDK для інтеграції з API UPC Token Service (Український
 7. **Get Card Content** (`/go/card/content`) — Отримання візуальних даних картки (зображення, логотип платіжної системи).
 8. **Get Card Metadata** (`/go/card/metadata`) — Отримання метаданих картки та емітента.
 
-#### Приклад використання:
+---
+
+## Архітектура: KMP модуль `shared` як єдине джерело
+
+```
+                              ┌────────────────────────────────────────┐
+                              │      shared (KMP Core Module)          │
+                              │  - JWS Signer / Verifier               │
+                              │  - Data Models & Serialization         │
+                              │  - UpcTokenServiceClient (Ktor Engine) │
+                              └──────────────────┬─────────────────────┘
+                                                 │
+          ┌──────────────────────────┬───────────┴───────────────┬──────────────────────────┐
+          ▼                          ▼                           ▼                          ▼
+   [Kotlin Client]            [Java Interop]              [JS / Node Interop]        [Swift / iOS]
+UpcTokenServiceClient    UpcTokenServiceJavaClient    UpcTokenServiceJsClient       shared.framework
+  (Coroutines / KMP)       (CompletableFuture)               (Promise)             (Swift async/await)
+          │                          │                           │                          │
+          ▼                          ▼                           ▼                          ▼
+   samples/kotlin              samples/java             samples/js-web & nodejs        samples/swift
+```
+
+---
+
+## Демонстраційні додатки (Samples & Demos)
+
+- 📱 [**Kotlin Demo** (`samples/kotlin`)](./samples/kotlin) — Multiplatform / Android / JVM додаток з корутинами.
+- ☕ [**Java Demo** (`samples/java`)](./samples/java) — Чистий Java-проєкт з використанням `CompletableFuture`.
+- 🌐 [**JavaScript Web Demo** (`samples/js-web`)](./samples/js-web) — Інтерактивний веб-додаток у браузері (`index.html`).
+- 🟢 [**NodeJS Demo** (`samples/nodejs`)](./samples/nodejs) — Бекенд-додаток на базі `Promise` / `async/await`.
+- 🍎 [**Swift Demo** (`samples/swift`)](./samples/swift) — Нативний Swift додаток (iOS / macOS) на базі Swift Concurrency.
+
+---
+
+## Приклади використання за технологіями
+
+### 1. Kotlin (Multiplatform / Android / JVM)
 
 ```kotlin
 import ua.upc.ecomm_sdk.tokenservice.client.UpcTokenServiceClient
 import ua.upc.ecomm_sdk.tokenservice.config.UpcTokenServiceEnvironment
-import ua.upc.ecomm_sdk.tokenservice.model.*
 
-// Створення клієнта
 val client = UpcTokenServiceClient.create(
     merchantId = "1750000",
     terminalId = "E1750000",
     environment = UpcTokenServiceEnvironment.TEST
 )
 
-// 1. Create Token
-val createResponse = client.createToken(
-    trackingId = "tx-12345",
+val response = client.createToken(
+    trackingId = "tx-1001",
     cardNum = "5506900480100006",
     expMonth = "04",
     expYear = "2026",
     cvNum = "123"
 )
-createResponse.fold(
-    onSuccess = { data -> println("Token created: ${data.upcToken}") },
-    onError = { error -> println("Error: ${error.comment}") }
+
+response.fold(
+    onSuccess = { data -> println("Token: ${data.upcToken}") },
+    onError = { err -> println("Error: ${err.comment}") }
+)
+```
+
+### 2. Java (Java 8, 11, 17, 21+ / Spring Boot)
+
+```java
+import ua.upc.ecomm_sdk.tokenservice.client.UpcTokenServiceJavaClient;
+import ua.upc.ecomm_sdk.tokenservice.config.UpcTokenServiceEnvironment;
+
+try (UpcTokenServiceJavaClient client = UpcTokenServiceJavaClient.create(
+        "1750000",
+        "E1750000",
+        UpcTokenServiceEnvironment.TEST
+)) {
+    client.createToken("tx-1001", "5506900480100006", "04", "2026", "123")
+          .thenAccept(response -> {
+              if (response.isSuccess()) {
+                  System.out.println("Token: " + response.getOrNull().getUpcToken());
+              }
+          })
+          .join();
+}
+```
+
+### 3. JavaScript (Web / Browser)
+
+```javascript
+import { UpcTokenServiceJsClient } from './app.js';
+
+// Створення клієнта з єдиного KMP ядра
+const client = UpcTokenServiceJsClient.create(
+    "1750000",
+    "E1750000",
+    "TEST"
+);
+
+const response = await client.createToken(
+    "tx-web-1001",
+    "5506900480100006",
+    "04",
+    "2026",
+    "123"
+);
+
+if (response.isSuccess) {
+    console.log("Token:", response.getOrNull().upcToken);
+}
+```
+
+### 4. NodeJS (Backend)
+
+```javascript
+const { UpcTokenServiceJsClient } = require('./index.js');
+
+// Створення клієнта з єдиного KMP ядра
+const client = UpcTokenServiceJsClient.create(
+    "1750000",
+    "E1750000",
+    "TEST"
+);
+
+const response = await client.createToken(
+    "tx-node-101",
+    "5506900480100006",
+    "04",
+    "2026",
+    "123"
+);
+
+console.log("Response:", response);
+```
+
+### 5. Swift (iOS / macOS)
+
+```swift
+import shared // KMP Framework
+
+let client = UpcTokenServiceClient.companion.create(
+    merchantId: "1750000",
+    terminalId: "E1750000",
+    environment: UpcTokenServiceEnvironment.test
 )
 
-// 2. Get Token Status
-val statusResponse = client.getTokenStatus(
-    trackingId = "tx-12346",
-    upcToken = "6F3D415A7D26B93A33C31065B2FF912A"
-)
-
-// 3. Suspend Token
-val suspendResponse = client.suspendToken(
-    trackingId = "tx-12347",
-    upcToken = "6F3D415A7D26B93A33C31065B2FF912A",
-    reasonCode = ReasonCodes.SUSPECTED_FRAUD,
-    reason = "User requested suspension"
-)
-
-// 4. Resume Token
-val resumeResponse = client.resumeToken(
-    trackingId = "tx-12348",
-    upcToken = "6F3D415A7D26B93A33C31065B2FF912A"
-)
-
-// 5. Refresh Token
-val refreshResponse = client.refreshToken(
-    trackingId = "tx-12349",
-    upcToken = "6F3D415A7D26B93A33C31065B2FF912A"
-)
-
-// 6. Delete Token
-val deleteResponse = client.deleteToken(
-    trackingId = "tx-12350",
-    upcToken = "6F3D415A7D26B93A33C31065B2FF912A",
-    reasonCode = ReasonCodes.CARDHOLDER_CONFIRMED,
-    reason = "Token removed by user"
-)
-
-// 7. Get Card Content
-val contentResponse = client.getCardContent(
-    trackingId = "tx-12351",
-    contentId = "c0092844da004f4b9ad4c196ac0e7103",
-    brand = CardBrands.VISA
-)
-
-// 8. Get Card Metadata
-val metadataResponse = client.getCardMetadata(
-    trackingId = "tx-12352",
-    upcToken = "6F3D415A7D26B93A33C31065B2FF912A"
-)
+Task {
+    let response = try await client.createToken(
+        trackingId: "tx-swift-101",
+        cardNum: "5506900480100006",
+        expMonth: "04",
+        expYear: "2026",
+        cvNum: "123"
+    )
+    if response.isSuccess {
+        print("Token: \(response.getOrNull()?.upcToken ?? "")")
+    }
+}
 ```
 
 ---
 
-- [/androidApp](./androidApp) contains the Android application.
-- [/desktopApp](./desktopApp) contains the desktop (JVM) application.
-- [/iosApp](./iosApp) contains the iOS application.
-- [/shared](./shared) holds the code shared across your applications — Compose UI, business logic, and platform-specific
-  implementations. [src](./shared/src) is for common code; the sibling `src@<platform>` folders (for example
-  `src@android`) hold code compiled only for the platform named in the folder.
-- [/webApp](./webApp) contains the web application, compiled to WebAssembly with Kotlin/Wasm.
+## Збірка, створення білдів та бандлів
 
-The `kotlin` (macOS/Linux) and `kotlin.bat` (Windows) scripts in the project root are self-bootstrapping wrappers for
-the Kotlin Toolchain: they download the pinned toolchain version on first use, so no separate installation is required.
-Build the whole project with `./kotlin build`.
+У проєкті використовується інструмент збірки Kotlin Multiplatform (Amper CLI `kotlin` / `kotlin.bat`).
 
-### Running
+### 1. Команди компіляції та збірки
 
-Use the run configurations provided by the run widget in your IDE's toolbar. You can also run each module from the
-command line:
+- **Повна збірка для всіх платформ:**
+  ```bash
+  # Linux / macOS
+  ./kotlin build
 
-- Android app: `./kotlin run -m androidApp`
-- Desktop app: `./kotlin run -m desktopApp`
-- iOS app: `./kotlin run -m iosApp`
-- Web app: `./kotlin run -m webApp`
+  # Windows (PowerShell / CMD)
+  .\kotlin.bat build
+  ```
 
-### Testing
+- **Таргетована збірка під конкретну платформу:**
+  ```bash
+  # Тільки JVM (JAR бібліотека для Java / Kotlin backend)
+  .\kotlin.bat build -p jvm
 
-Run the project's tests with `./kotlin test`, or `./kotlin test -m <module>` for a single module.
+  # Тільки Android (AAR бібліотека для Android додатків)
+  .\kotlin.bat build -p android
+
+  # Тільки JavaScript KLib для Kotlin/JS споживачів
+  .\kotlin.bat build -p js
+
+  # Тільки iOS (Apple Framework для iOS / macOS / Swift)
+  .\kotlin.bat build -p iosArm64 -p iosSimulatorArm64
+  ```
+
+- **Запуск модульних та інтеграційних тестів:**
+  ```bash
+  .\kotlin.bat test -p jvm -p android
+  ```
 
 ---
 
-Learn more
-about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html), [Kotlin Toolchain](https://kotlin-toolchain.org/dev/), [Compose Multiplatform](https://kotlinlang.org/compose-multiplatform/), [Kotlin/Wasm](https://kotl.in/wasm/).
+### 2. Використання зібраних артефактів
+
+#### 🌐 JavaScript / Web та Node.js
+Команда `kotlin.bat build -p js` компілює `shared` у Kotlin/JS `.klib`. Для готового executable та браузерного бандла використовується окремий Gradle linking-проєкт `js-sdk`, який посилається безпосередньо на `shared/src` і `shared/src@js` (дубльованої реалізації SDK немає). Потрібен JDK 17+; доданий Gradle Wrapper сам завантажить Gradle 8.14.3.
+
+З кореня репозиторію виконайте через доданий Gradle Wrapper (він використовує Gradle 8.14.3):
+```powershell
+.\js-sdk\gradlew.bat -p js-sdk jsBrowserProductionWebpack
+.\js-sdk\gradlew.bat -p js-sdk compileProductionExecutableKotlinJs
+```
+
+Браузерний артефакт створюється в `js-sdk/build/distributions/ecomm-sdk.js`; Node.js executable генерується Kotlin/JS Node target у `js-sdk/build/`. Подробиці та доступна експортована функція описані в `js-sdk/README.md`.
+
+Файл `samples/js-web/ecomm-sdk.js` не є результатом компіляції KMP-модуля і не повинен поширюватися як офіційний SDK-артефакт.
+
+Для Kotlin/JS споживачів доступний результат `.klib` у `build/tasks/_shared_compileJs/shared.klib`.
+
+#### ☕ JVM / Android артефакти (JAR / AAR)
+- Після виконання `.\kotlin.bat build` згенеровані артефакти розміщуються в каталозі `build/tasks/`:
+  - `_shared_jarJvm/shared.jar` — JAR бібліотека для Java / Kotlin серверних та десктопних додатків.
+  - `_shared_aarAndroidDebug/shared.aar` — AAR бібліотека для Android.
+- Підключаються як залежності в `build.gradle.kts` або Maven `pom.xml`.
+
+#### 🍎 Apple / iOS Framework (`shared.framework`)
+- Компілюється за допомогою таргета `iosArm64` / `iosSimulatorArm64`.
+- Підключається у Xcode проєкт як Framework або Swift Package для використання у Swift через `import shared`.

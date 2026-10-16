@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UPC Token Service SDK - Web Demo</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>UPC Token Service SDK</h1>
+        <p>JavaScript / Web Client Demo Application</p>
+    </header>
+
+    <div class="grid">
+        <!-- Configuration & Token Creation -->
+        <div class="card">
+            <h2>1. Create Token</h2>
+            <div class="form-group">
+                <label for="baseUrl">Base URL / Proxy Gateway</label>
+                <input type="text" id="baseUrl" placeholder="http://localhost:3000 або https://ecg.test.upc.ua">
+            </div>
+            <div class="form-group">
+                <label for="merchantId">Merchant ID</label>
+                <input type="text" id="merchantId" value="1750000">
+            </div>
+            <div class="form-group">
+                <label for="terminalId">Terminal ID</label>
+                <input type="text" id="terminalId" value="E1750000">
+            </div>
+            <div class="form-group">
+                <label for="cardNum">Card Number (PAN)</label>
+                <input type="text" id="cardNum" value="4111111111111111" placeholder="4111111111111111 (Visa) або 5440000000000001 (MC)">
+                <small style="color: #6c757d; font-size: 0.75rem;">Тестові картки UPC: 4111111111111111 (Visa), 5440000000000001 (Mastercard), 5506900480100006</small>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <div class="form-group" style="flex: 1;">
+                    <label for="expMonth">Exp Month</label>
+                    <input type="text" id="expMonth" value="12">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label for="expYear">Exp Year</label>
+                    <input type="text" id="expYear" value="2028">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label for="cvNum">CVV / CVC</label>
+                    <input type="password" id="cvNum" value="123">
+                </div>
+            </div>
+            <button id="btnCreateToken" onclick="onCreateToken()">Створити токен</button>
+        </div>
+
+        <!-- Token Management Operations -->
+        <div class="card">
+            <h2>2. Token Actions & Lifecycle</h2>
+            <div class="form-group">
+                <label for="activeToken">Active UPC Token</label>
+                <input type="text" id="activeToken" placeholder="Токен буде підставлено автоматично..." value="6F3D415A7D26B93A33C31065B2FF912A">
+            </div>
+            <div class="form-group">
+                <label>Поточний статус токену:</label>
+                <span id="statusBadge" class="status-badge active">ACTIVE</span>
+            </div>
+
+            <div class="btn-group">
+                <button class="secondary" onclick="onGetStatus()">Статус (Get Status)</button>
+                <button class="secondary" onclick="onSuspendToken()">Призупинити (Suspend)</button>
+                <button class="secondary" onclick="onResumeToken()">Відновити (Resume)</button>
+                <button class="secondary" onclick="onRefreshToken()">Оновити (Refresh)</button>
+                <button class="secondary" onclick="onGetMetadata()">Метадані (Metadata)</button>
+                <button class="danger" onclick="onDeleteToken()">Видалити (Delete)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Output / Logs View -->
+    <div class="card" style="margin-top: 20px;">
+        <h2>Консоль відповідей та логів</h2>
+        <pre id="outputLog">SDK готовий до роботи. Натисніть "Створити токен" або оберіть дію.</pre>
+    </div>
+</div>
+
+    <!-- UPC Token Service SDK bundle -->
+    <script src="ecomm-sdk.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

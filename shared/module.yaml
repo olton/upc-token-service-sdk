@@ -1,26 +1,14 @@
 product:
   type: kmp/lib
-  platforms: [ jvm, android, iosArm64, iosSimulatorArm64, wasmJs ]
+  platforms: [ jvm, android, iosArm64, iosSimulatorArm64, js ]
 
 dependencies:
-  - $compose.runtime
-  - $compose.foundation
-  - $compose.material3
-  - $compose.ui
-  - $compose.components.resources
-  - $compose.preview
-  - $compose.hotReload.runtimeApi
-  - $libs.androidx.lifecycle.viewmodel.compose
-  - $libs.androidx.lifecycle.runtime.compose
   - $libs.kotlinx.coroutines.core
   - $libs.kotlinx.serialization.json
   - $libs.ktor.client.core
   - $libs.ktor.client.cio
   - $libs.ktor.client.content.negotiation
   - $libs.ktor.serialization.kotlinx.json
-
-dependencies@android:
-  - $compose.uiTooling
 
 test-dependencies:
   - $libs.ktor.client.mock
@@ -30,9 +18,3 @@ settings:
   kotlin:
     serialization:
       format: json
-  compose:
-    enabled: true
-    resources:
-      packageName: ua.upc.ecomm_sdk.resources
-      # Generate public accessors so other modules (and previews) can use Res.*
-      exposedAccessors: true

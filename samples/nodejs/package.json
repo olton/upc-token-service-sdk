@@ -1,0 +1,19 @@
+{
+  "name": "upc-token-service-nodejs-demo",
+  "version": "1.0.0",
+  "description": "UPC Token Service SDK NodeJS Demo Application",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "upc",
+    "token-service",
+    "ecommerce",
+    "payments",
+    "sdk",
+    "nodejs"
+  ],
+  "author": "UPC",
+  "license": "MIT"
+}
